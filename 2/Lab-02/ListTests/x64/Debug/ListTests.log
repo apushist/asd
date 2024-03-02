@@ -1,2 +1,3 @@
 ﻿  ListTests.cpp
-  ListTests.vcxproj -> D:\4семестр\АСД\2\Lab-02\x64\Debug\ListTests.dll
+     Создается библиотека D:\4семестр\АСД\Lab-02\x64\Debug\ListTests.lib и объект D:\4семестр\АСД\Lab-02\x64\Debug\ListTests.exp
+  ListTests.vcxproj -> D:\4семестр\АСД\Lab-02\x64\Debug\ListTests.dll
