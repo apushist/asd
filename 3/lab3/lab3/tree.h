@@ -1,22 +1,31 @@
 #pragma once
+#include <iostream>
+#include <stack>
+#include <queue>
 
-
-
-template<typename T> 
-struct Node {
-	Node* parent;
-	T value;
-	Node* left;
-	Node* right;
-
-	Node(Node* parent, const T& value, Node* left, Node* right)
-		: parent(parent), value(value), left(left), right(right){}
-
-	Node(const T& val): parent(nullptr), value(val), left(nullptr), right(nullptr) {}
-};
 
 template<typename T>
 class Tree {
+
+public:
+	struct Node {
+		Node* parent;
+		T value;
+		Node* left;
+		Node* right;
+
+		Node(Node* parent, const T& value, Node* left = nullptr, Node* right = nullptr)
+			: parent(parent), value(value), left(left), right(right) {}
+
+		Node(const T& val) : parent(nullptr), value(val), left(nullptr), right(nullptr) {}
+
+		friend std::ostream& operator<<(std::ostream& os,Node& n) {
+			return os << n.value;
+		}
+
+
+	};
+private:
 	Node* root;
 
 public:
@@ -29,54 +38,285 @@ public:
 		other.root = nullptr;
 	}
 
-	Tree& operator=(const Tree& other) {
-		if (this == &right) {
-			return *this;
-		}
-		
-		return *this;
-	}
 
-	Tree& operator=(Tree&& other) {
-		//Todo op=
-
-		return *this;
-	}
-
-	//TODO Добавление элемента в дерево;
-	public void insert(T value) {
+	void insert(T value) {
 		if (!root)
+		{
 			root = new Node(value);
+			return;
+		}
+		Node* node = root;
+		while (node) {
+			if (value < node->value) {
+				if (node->left)
+					node = node->left;
+				else
+				{
+					node->left = new Node(node, value);
+					break;
+				}
+			}
+			else
+				if (value > node->value) {
+					if (node->right)
+						node = node->right;
+					else
+					{
+						node->right = new Node(node,value);
+						break;
+					}
+				}
+				else
+					break;
+		}
 	}
 
-	//TODO Поиск элемента;
-	public void insert(T value) {
 
+	Node* find(T value) {
+		Node* node = root;
+		while (node) {
+			if (value < node->value) {
+				if (node->left)
+					node = node->left;
+				else
+				{
+					return nullptr;
+				}
+			}
+			else
+				if (value > node->value) {
+					if (node->right)
+						node = node->right;
+					else
+					{
+						return nullptr;
+					}
+				}
+				else{
+					return node;
+				}
+		}
 	}
 
-	//TODO Поиск минимального и максимального элементов;
-	
 
-	//TODO 4. Поиск первого элемента, больше(меньше) или равного заданного;
-	
+	Node* findMax() {
+		Node* node = root;
+		while (node->right)
+			node = node->right;
+		return node;
+	}
 
-	//TODO 5. Удаление элемента;
-	
+	Node* findMin() {
+		Node* node = root;
+		while (node->left)
+			node = node->left;
+		return node;
+	}
 
-	//TODO 6. Вывод на экран – рекурсивный обход(ЛКП);
-	
+
+	Node* upperBound(T value) {
+		Node* res = nullptr;
+		Node* cur = root;
+		while (cur)
+		{
+			if (cur->value >= value) {
+				res = cur;
+				cur = cur->left;
+			}
+			else {
+				cur = cur->right;
+			}
+			
+		}
+		return res;
+	}
+
+	Node* lowerBound(T value) {
+		Node* res = nullptr;
+		Node* cur = root;
+		while (cur)
+		{
+			if (cur->value <= value) {
+				res = cur;
+				cur = cur->right;
+			}
+			else
+				cur = cur->left;
+		}
+		return res;
+	}
+
+
+	void deleteElem(T value) {
+		Node* node = find(value);
+		if (!node)
+			return;
+		Node* parent = node->parent;
+		if (!node->right) {
+			setChild(parent, node, node->left);
+			
+		}
+		else {
+			if (!node->left && node->right) {
+				setChild(parent, node, node->right);
+			}
+			else {
+				Node* change = node->left;
+				while (change->right)
+					change = change->right;
+				std::swap(node->value, change->value);
+				if (change->right)
+					setChild(change->parent, change, change->right);
+				else
+					setChild(change->parent, change, change->left);
+			}
+		}
+	}
+
+private:
+	void setChild(Node* parent, Node* node, Node* child) {
+		if (parent) {
+			if (parent->right == node)
+				parent->right = child;
+			else
+				parent->left = child;
+		}
+		else
+			root = child;
+		delete node;
+	}
+public:
+
+
+	void printLKP() {
+		Node* cur = root;
+		helpLKP(cur);
+		std::cout << "\n";
+	}
+
+private:
+
+	void helpLKP(Node* node)  {
+		if (!node)
+			return;
+		helpLKP(node->left);
+		std::cout << *node << " ";
+		helpLKP(node->right);
+	}
+public:
+
 
 	//TODO 7. Вывод на экран – с использованием стека(ПКЛ) и без использования рекурсии;
+	void printPKL() {
+		Node* cur = root;
+
+		std::stack<Node*> st;
+
+		while (cur->right)
+		{
+			cur = cur->right;
+		}
+
+		/*Node* node = cur;
+		setMin(node);
+		st.push(node);
+		if (node->right) {
+			node = node->right;
+			setMin(node);
+			st.push(node);
+
+		}*/
+		/*Node* node;
+		st.push(cur);
+		while (!st.empty()) {
+			cur = st.top();
+			while (cur->left) {
+				cur = cur->left;
+				st.push(cur);
+			}
+			node = cur;
+			st.pop();
+			if(cur->right)
+			{
+				st.push(cur->right);
+			}
+			else
+		}*/
+	}
+
+private:
+
+		void setMin(Node* node) {
+			while (node->left)
+				node = node->left;
+		}
+public:
 	
 
-	//TODO 8. Вывод на экран «по слоям» – с использованием очереди;
+	void printLevels() {
+		Node* cur = root;
+		std::queue<Node*> q;
+		q.push(cur);
+		while (!q.empty()) {
+			cur = q.front();
+			q.pop();
+			std::cout << *cur << " ";
+			if (cur->left)
+				q.push(cur->left);
+			if (cur->right)
+				q.push(cur->right);
+
+		}
+		std::cout << "\n";
+
+	}
 	
 
-	//TODO 9. Сравнение двух деревьев на равенство(идентичность полностью, по элементам и структуре, рекурсивно).
-	
+	bool operator==(Tree& tree) {
+		Node* r1 = root;
+		Node* r2 = tree.root;
+		return helpEqual(r1, r2);
+	}
 
-	//TODO	10.Поиск для заданного(в виде указателя или итератора) элемента следующего и предыдущего элементов
-	
+private:
+	bool helpEqual(Node* r1, Node* r2) {
+		return (r1 && r2) ? (r1->value == r2->value && helpEqual(r1->left, r2->left) && helpEqual(r1->right, r2->right)): (!r1 &&!r2);
+	}
+public:
+
+	Node* next(Node* node) {
+		Node* cur = node->right;
+		if(cur)
+		{
+			while (cur->left)
+				cur = cur->left;
+		}
+		else
+		{
+			T value = node->value;
+			cur = node->parent;
+			while (value > cur->value)
+				cur = cur->parent;
+		}
+		return cur;
+	}
+
+	Node* previous(Node* node) {
+		Node* cur = node->left;
+		if (cur)
+		{
+			while (cur->right)
+				cur = cur->right;
+		}
+		else
+		{
+			T value = node->value;
+			cur = node->parent;
+			while (value < cur->value)
+				cur = cur->parent;
+		}
+		return cur;
+	}
 
 
 };
