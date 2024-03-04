@@ -205,43 +205,26 @@ private:
 	}
 public:
 
-
-	//TODO 7. Вывод на экран – с использованием стека(ПКЛ) и без использования рекурсии;
 	void printPKL() {
 		Node* cur = root;
 
 		std::stack<Node*> st;
 
-		while (cur->right)
+		while (cur || !st.empty())
 		{
-			cur = cur->right;
-		}
-
-		/*Node* node = cur;
-		setMin(node);
-		st.push(node);
-		if (node->right) {
-			node = node->right;
-			setMin(node);
-			st.push(node);
-
-		}*/
-		/*Node* node;
-		st.push(cur);
-		while (!st.empty()) {
-			cur = st.top();
-			while (cur->left) {
-				cur = cur->left;
-				st.push(cur);
-			}
-			node = cur;
-			st.pop();
-			if(cur->right)
+			while (cur)
 			{
-				st.push(cur->right);
+				st.push(cur);
+				cur = cur->right;
 			}
-			else
-		}*/
+
+			cur = st.top();
+			st.pop();
+			std::cout << *cur << " ";
+			cur = cur->left;
+		}
+		std::cout << "\n";
+
 	}
 
 private:

@@ -33,14 +33,14 @@ int main() {
 	tr2.insert(34);
 
 	//Tree<int>::Node* n = tr.previous(tr.find(28));
-	//tr.printLKP();
+	tr.printLKP();
 	/*tr.deleteElem(10);
 	tr.printLKP();
 	tr.deleteElem(16);
 	tr.printLKP();
 	tr.deleteElem(25);
 	tr.printLKP();*/
-	//tr.printPKL();
+	tr.printPKL();
 	//tr.printLevels();
-	std::cout << (tr == tr2);
+	//std::cout << (tr == tr2);
 }
