@@ -38,7 +38,7 @@ class Binary_Search_Tree
 		bool isNil;
 		//  Хранимый в узле ключ
 		T data;
-		Node(T value = T(), Node* p = nullptr, Node* l = nullptr, Node* r = nullptr) : parent(p), data(value), left(l), right(r),isNil(false) {}
+		Node(T value = T(), Node* p = dummy, Node* l = dummy, Node* r = dummy) : parent(p), data(value), left(l), right(r),isNil(false) {}
 	};
 
 	//  Стандартные контейнеры позволяют указать пользовательский аллокатор, который используется для
