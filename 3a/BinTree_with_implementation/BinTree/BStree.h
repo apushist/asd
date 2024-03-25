@@ -13,6 +13,7 @@
 #include <initializer_list>
 #include <functional>
 #include <exception>
+#include <utility>
 
 template<typename T, class Compare = std::less<T>, class Allocator = std::allocator<T>>
 class Binary_Search_Tree
@@ -107,6 +108,7 @@ private:
 		std::allocator_traits<AllocType>::construct(Alc, &(dummy->right));
 		dummy->right = dummy;
 
+		std::allocator_traits<AllocType>::construct(Alc, &(dummy->isNil));
 		dummy->isNil = true;
 		
 		//  Возвращаем указатель на созданную вершину
@@ -132,6 +134,9 @@ private:
 
 		//  Конструируем поле данных
 		std::allocator_traits<AllocType>::construct(Alc, &(new_node->data), std::forward<T>(elem));
+
+
+		std::allocator_traits<AllocType>::construct(Alc, &(new_node->isNil), std::forward<T>(false));
 
 		//  Возвращаем указатель на созданную вершину
 		return new_node;
@@ -198,19 +203,24 @@ public:
 				throw std::exception("No parent!");
 			return data->parent->right == data;
 		}
+
+		inline bool IsNil() const noexcept
+		{
+			return data->isNil;
+		}
 		//  Поиск «самого левого» элемента
 		iterator GetMin() {
 			Node* node = data;
-			while (node->left)
+			while (node->left && node->left->isNil)
 				node = node->left;
-			return iterator(node)
+			return iterator(node);
 		}
 		//  Поиск «самого правого» элемента
 		iterator GetMax() {
 			Node* node = data;
-			while (node->right)
+			while (node->right && node->right->isNil)
 				node = node->right;
-			return iterator(node)
+			return iterator(node);
 		}
 	public:
 		//  Определяем стандартные типы в соответствии с требованиями стандарта к двунаправленным итераторам
@@ -231,7 +241,7 @@ public:
 			if (!node)
 				return nullptr;
 			Node* cur = node->right;
-			if (cur)
+			if (!cur->isNil)
 			{
 				while (cur->left)
 					cur = cur->left;
@@ -240,7 +250,7 @@ public:
 			{
 				T value = node->value;
 				cur = node->parent;
-				while (cur && value > cur->value)
+				while (!cur->isNil && value > cur->value)
 					cur = cur->parent;
 			}
 			return cur;
@@ -250,7 +260,7 @@ public:
 			if (node->isNil)
 				return dummy;
 			Node* cur = node->left;
-			if (cur)
+			if (!cur->isNil)
 			{
 				while (!cur->right->isNil)
 					cur = cur->right;
@@ -270,25 +280,25 @@ public:
 		//  Преинкремент - следующий элемент множества
 		iterator & operator++()
 		{
-			this = iterator(next(data));
+			*this =  iterator(next(data));
 			return *this;
 		}
 		//  Предекремент - переход на предыдущий элемент множества
 		iterator & operator--()
 		{
-			this = iterator(previous(data));
+			*this = iterator(previous(data));
 			return *this;
 		}
 		//  Постинкремент
 		iterator operator++(int) {
 			iterator temp = *this;
-			this = iterator(next(data));
+			*this = iterator(next(data));
 			return temp;
 		}
 		//  Постдекремент
 		iterator operator--(int) {
 			iterator temp = *this;
-			this = iterator(previous(data));
+			*this = iterator(previous(data));
 			return temp;
 		}
 
@@ -417,19 +427,72 @@ public:
 		std::swap(tree_size, other.tree_size);
 	}
 
-	//todo  Вставка элемента по значению. 
-	std::pair<iterator, bool> insert(const T & value)//проверка с begin rbegin
+	//Вставка элемента по значению. 
+	std::pair<iterator, bool> insert(const T & value)
 	{
-		//bool - было ли вставлено значение или это повтор
-		throw std::exception("Not implemented!");
-		//return std::make_pair(iterator(new_node), true);
+		Node* resn = dummy;
+		if (dummy->parent.isNil)
+		{
+			resn = make_node(value,dummy,dummy,dummy);
+			dummy->parent = resn;
+			dummy->left = resn;
+			dummy->right = resn;
+			tree_size++;
+			return std::make_pair(iterator(resn), true);
+		}
+		Node* node = dummy->parent;
+		while (!node->isNil) {
+			if (cmp(value,node->data)) {
+				if (node->left != dummy)
+					node = node->left;
+				else
+				{
+					
+					node->left = make_node(value, node, dummy, dummy);
+					resn = node->left;
+					if (cmp(resn->data,*begin())) {
+						dummy->left = resn;
+					}
+					break;
+				}
+			}
+			else
+				if (cmp(value, node->data)) {
+					if (node->right != dummy)
+						node = node->right;
+					else
+					{
+						node->right = make_node(value, node, dummy, dummy);
+						resn = node->right;
+						if (cmp(resn->data,*rbegin()))
+							dummy->right = resn;
+						break;
+					}
+				}
+				else
+					break;
+		}
+		return std::make_pair(iterator(resn), resn->isNil);
 	}	
 
-	iterator insert(const_iterator position, const value_type& x) { //todo
-		//  Проверяем, корректно ли задана позиция для вставки: ... prev -> x -> position -> ...
-		//  2 5 6 7 10 11 15,    x = 8 если неверная позиция кидать исключение
-		throw std::exception("Not implemented!");
-		//  Всё???
+	iterator insert(const_iterator position, const value_type& x) { 
+		iterator prev = --position;
+		if ((position == begin() || cmp(*prev, x)) && cmp(x, *position)) {
+			Node* node = position._data();
+			Node* newnode;
+			if (!node->left->isNil){
+				node = node->left;
+				while (!node->right->isNil)
+				{
+					node = node->right;
+				}
+			}
+			newnode = make_node(node, x, dummy, dummy);
+
+			return iterator(newnode);
+		}
+		throw std::exception("Wrong position");
+		
 	}
 
 	//  Не самый лучший вариант.
@@ -438,18 +501,44 @@ public:
 		while (first != last) insert(*first++);
 	}
 
-	iterator find(const value_type& value) const {//todo
+	iterator find(const value_type& value) const {
 		
 		iterator current = iterator(dummy->parent);
-
-		throw std::exception("Not implemented!");
-		return current;
+		while (!current._data()->isNil)
+		{
+			if (cmp(value, *current)) {
+				if ((*current.Left())->isNil)
+					current = current.Left();
+				else
+					return iterator(dummy);
+			}
+			else {
+				if (!cmp(value, *current)) {
+					if ((*current.Right())->isNil)
+						current = current.Right();
+					else
+						return iterator(dummy);
+				}
+				else {
+					return current;
+				}
+			}
+		}
 	}
 
-	iterator lower_bound(const value_type& key) {//todo
-		iterator current{ dummy->parent }, result{ dummy->parent };
-
-		throw std::exception("Not implemented!");
+	iterator lower_bound(const value_type& key) {
+		iterator current{ dummy->parent }, result{ dummy };
+		while (!current._data()->isNil)
+		{
+			if (!cmp(*current, key)) {
+				current = current.Left();
+			}
+			else {
+				result = current;
+				current = current.Right();
+			}
+		}
+		
 		return result;
 	}
 
@@ -457,9 +546,21 @@ public:
 		return const_iterator(const_cast<Binary_Search_Tree *>(this)->lower_bound(key));
 	}
 
-	iterator upper_bound(const value_type& key) {//todo
+	iterator upper_bound(const value_type& key) {
+		iterator current{ dummy->parent }, result{ dummy };
+		while (!current._data()->isNil)
+		{
+			if (cmp(*current, key)) {
+				current = current.Left();
+			}
+			else {
+				result = current;
+				current = current.Right();
+			}
+		}
 
-		throw std::exception("Not implemented!");
+		return result;
+		
 	}
 
 	const_iterator upper_bound(const value_type& key) const {
@@ -471,42 +572,80 @@ public:
 	}
 
 	std::pair<const_iterator, const_iterator> equal_range(const value_type& key) const {
-		throw std::exception("Not implemented!");//todo
+		const_iterator it = find(key);
+		return std::make_pair(it, it);
 	}
 
 protected:
 	//  Удаление листа дерева. Возвращает количество удалённых элементов
 	size_type delete_leaf(iterator leaf) {
-		#ifdef _DEBUG
-		if (leaf.isNil()) return 0; // Стоит потом убрать, так как уже проверяем, что итератор валидный в erase
-		#endif
-		throw std::exception("Not implemented!");//todo
+		Node* parent = leaf.Parent()._data();
+		if (leaf == begin())
+			dummy->left = parent;
+		if (leaf == rbegin())
+			dummy->right = parent;
+		if (leaf.IsLeft()) {
+			parent->left = dummy;			
+		}
+		else {
+			parent->right = dummy;
+		}
+		delete_node(leaf.data);
 		return 1;
 	}
 
-	//  Меняет местами текущий узел и максимальный в левом поддеревею Возвращает тот же итератор, но теперь он без правого поддерева
+	//  Меняет местами текущий узел и максимальный в левом поддереве Возвращает тот же итератор, но теперь он без правого поддерева
 	iterator replace_with_max_left(iterator node)
 	{
-		//  node имеет обоих дочерних - левое и правое поддерево, т.е. из особых вершин может быть только корнем
-
 		//  Находим максимальный элемент слева. У него нет правого дочернего, и он не может быть корнем или самым правым
 		iterator left_max = node.Left().GetMax();
+		std::swap(node.data, left_max.data);
 
-		throw std::exception("Not implemented!");//todo
+
 		return node;
 	} 	
+
+	void setChild(iterator elem, Node* child) {
+		Node* node = elem.data;
+		Node* parent = elem.Parent()._data();
+		child->parent = parent;
+		if (!elem.Parent().isNil()) {
+			if (elem.IsRight())
+				parent->right = child;
+			else
+				parent->left = child;
+		}
+		else
+			dummy->parent = child;
+		delete_node(node);
+	}
 
 
 public:
 	//  Удаление элемента, заданного итератором. Возвращает количество удалённых элементов (для set - 0/1)
-	iterator erase(iterator elem) {
+	size_t erase(iterator elem) {
 		//  Если фиктивный элемент, то ошибка - такого не должно происходить
-		if (elem.isNil()) return iterator(elem);
-		
-		throw std::exception("Not implemented!");//todo
-		replace_with_max_left(elem);
+		if (elem.isNil()) 
+			throw std::exception("elem is nil!");
+		if (elem.Left().isNil() && elem.Right().isNil()) {
+			delete_leaf();
+		}
+		else {
+			if (elem.Left().isNil()) {
+				setChild(elem, elem.Right()._data());
+			}
+			else {
+				if (elem.Right().isNil()) {
+					setChild(elem, elem.Left()._data());
+				}
+				else {
+					replace_with_max_left(elem);
+					erase(elem);
+				}
+			}
+		}
 
-		return erase(elem);
+		return 1;
 	}
 	
 	size_type erase(const value_type& elem) {
@@ -517,15 +656,16 @@ public:
 		return 1;
 	}
 	
-	//  Проверить!!!
+	//  Проверить!!! todo
 	iterator erase(const_iterator first, const_iterator last) {
 		while (first != last)
 			first = erase(first);
 		return last;
 	}
 
-	//Если передавать по ссылкам,все хорошо. Конструктор копий принескольких деревьях ломается.
-	friend bool operator== (const Binary_Search_Tree<T> &tree_1, const Binary_Search_Tree<T> & tree_2)
+	//Если передавать по ссылкам,все хорошо. Конструктор копий при нескольких деревьях ломается.
+	friend bool operator== (const Binary_Search_Tree &tree_1,
+		const Binary_Search_Tree & tree_2)
 	{
 		auto i = tree_1.begin(), ii = tree_2.begin();
 		for (; (i != tree_1.end()) && (ii != tree_2.end()); ++i, ++ii)

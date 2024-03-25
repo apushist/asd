@@ -175,6 +175,8 @@ public:
 
 private:
 	void setChild(Node* parent, Node* node, Node* child) {
+		if(child)
+			child->parent = parent;
 		if (parent) {
 			if (parent->right == node)
 				parent->right = child;
@@ -268,6 +270,8 @@ private:
 public:
 
 	Node* next(Node* node) {
+		if (!node)
+			return nullptr;
 		Node* cur = node->right;
 		if(cur)
 		{
@@ -278,13 +282,15 @@ public:
 		{
 			T value = node->value;
 			cur = node->parent;
-			while (value > cur->value)
+			while (cur && value > cur->value)
 				cur = cur->parent;
 		}
 		return cur;
 	}
 
 	Node* previous(Node* node) {
+		if (!node)
+			return nullptr;
 		Node* cur = node->left;
 		if (cur)
 		{
@@ -295,7 +301,7 @@ public:
 		{
 			T value = node->value;
 			cur = node->parent;
-			while (value < cur->value)
+			while (cur && value < cur->value)
 				cur = cur->parent;
 		}
 		return cur;
