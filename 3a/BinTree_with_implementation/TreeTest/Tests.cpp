@@ -81,8 +81,8 @@ namespace TreeTest
 
 		//  Для того, чтобы выполнить тестирование одного из указанных контейнеров (std::set или Binary_Tree_Search)
 		//    должна быть раскомментирована одна из следующих строк:
-		template<typename T> using ContainerTemplate = std::set<T, Mypred<T>, Myal<T>>;
-		//template<typename T> using ContainerTemplate = Binary_Search_Tree<T, Mypred<T>, Myal<T>>;
+		//template<typename T> using ContainerTemplate = std::set<T, Mypred<T>, Myal<T>>;
+		template<typename T> using ContainerTemplate = Binary_Search_Tree<T, Mypred<T>, Myal<T>>;
 
 		using Mycont = ContainerTemplate<char>;
 
@@ -174,7 +174,7 @@ namespace TreeTest
 			Assert::IsTrue(v0.size() == 5 && *v0.begin() == 'a');
 			v0.insert(carr2, carr2 + 3);
 			Assert::IsTrue(v0.size() == 6 && *--v0.end() == 'f');
-			Assert::IsTrue(*v0.erase(v0.begin()) == 'b' && v0.size() == 5);
+			Assert::IsTrue(v0.erase(v0.begin()) == 'b' && v0.size() == 5);
 			Assert::IsTrue(*v0.erase(v0.begin(), ++v0.begin()) == 'c' && v0.size() == 4);
 			Assert::IsTrue(v0.erase('x') == 0 && v0.erase('e') == 1);
 		}
@@ -431,8 +431,8 @@ namespace TreeTest
 
 		//  Для того, чтобы выполнить тестирование одного из указанных контейнеров (std::set или Binary_Tree_Search)
 		//    должна быть раскомментирована одна из следующих строк:
-		template<typename T> using ContainerTemplate = std::set<T, Mypred<T>, Myal<T>>;
-		//template<typename T> using ContainerTemplate = Binary_Search_Tree<T, Mypred<T>, Myal<T>>;
+		//template<typename T> using ContainerTemplate = std::set<T, Mypred<T>, Myal<T>>;
+		template<typename T> using ContainerTemplate = Binary_Search_Tree<T, Mypred<T>, Myal<T>>;
 
 
 		TEST_METHOD(StringTests)

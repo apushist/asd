@@ -18,6 +18,7 @@
 template<typename T, class Compare = std::less<T>, class Allocator = std::allocator<T>>
 class Binary_Search_Tree
 {
+public:
 	//  Объект для сравнения ключей. Должен удовлетворять требованию строго слабого порядка, т.е. иметь свойства:
 	//    1. Для любого x => cmp(x,x) == false (антирефлексивность)
 	//    2. Если cmp(x,y) == true  =>  cmp(y,x) == false (асимметричность)
@@ -27,6 +28,7 @@ class Binary_Search_Tree
 	//     нужными свойствами, то можно использовать его отрицание и рассматривать дерево как инвертированное от требуемого.
 	Compare cmp = Compare();
 
+private:
 	//  Узел бинарного дерева, хранит ключ, три указателя и признак nil для обозначения фиктивной вершины
 	class Node
 	{
@@ -86,8 +88,9 @@ public:
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 private:
-	// Указательно на фиктивную вершину
+	// Указатель на фиктивную вершину
 	Node* dummy;
+
 
 	//  Количесто элементов в дереве
 	size_type tree_size = 0;
@@ -136,7 +139,8 @@ private:
 		std::allocator_traits<AllocType>::construct(Alc, &(new_node->data), std::forward<T>(elem));
 
 
-		std::allocator_traits<AllocType>::construct(Alc, &(new_node->isNil), std::forward<T>(false));
+		std::allocator_traits<AllocType>::construct(Alc, &(new_node->isNil));
+		new_node->isNil = false;
 
 		//  Возвращаем указатель на созданную вершину
 		return new_node;
@@ -190,24 +194,21 @@ public:
 			return data->right->isNil ? iterator(dummy) : iterator(data->right);
 		}
 		//  Является ли узел дерева левым у своего родителя
-		inline bool IsLeft() const noexcept
+		inline bool IsLeft() const 
 		{
-			if(!data->parent)
+			if(data->parent->isNil)
 				throw std::exception("No parent!");
 			return data->parent->left == data;
 		}
 		//  Является ли узел дерева правым у своего родителя
-		inline bool IsRight() const noexcept
+		inline bool IsRight() const 
 		{
-			if (!data->parent)
+			if (data->parent->isNil)
 				throw std::exception("No parent!");
 			return data->parent->right == data;
 		}
 
-		inline bool IsNil() const noexcept
-		{
-			return data->isNil;
-		}
+		
 		//  Поиск «самого левого» элемента
 		iterator GetMin() {
 			Node* node = data;
@@ -223,6 +224,8 @@ public:
 			return iterator(node);
 		}
 	public:
+
+
 		//  Определяем стандартные типы в соответствии с требованиями стандарта к двунаправленным итераторам
 		using iterator_category = std::bidirectional_iterator_tag;
 		using value_type = Binary_Search_Tree::value_type;
@@ -236,10 +239,13 @@ public:
 			return data->data;
 		}
 
+		inline bool isNil() const 
+		{
+			return data->isNil;
+		}
+
 	private:
 		Node* next(Node* node) {
-			if (!node)
-				return nullptr;
 			Node* cur = node->right;
 			if (!cur->isNil)
 			{
@@ -248,17 +254,15 @@ public:
 			}
 			else
 			{
-				T value = node->value;
 				cur = node->parent;
-				while (!cur->isNil && value > cur->value)
+				Compare cmp = Compare();
+				while (!cur->isNil && cmp(cur->data, node->data))
 					cur = cur->parent;
 			}
 			return cur;
 		}
 
 		Node* previous(Node* node) {
-			if (node->isNil)
-				return dummy;
 			Node* cur = node->left;
 			if (!cur->isNil)
 			{
@@ -267,9 +271,9 @@ public:
 			}
 			else
 			{
-				T value = node->value;
 				cur = node->parent;
-				while (!cur->isNil && value < cur->value)
+				Compare cmp = Compare();
+				while (!cur->isNil && cmp(node->data, cur->data))
 					cur = cur->parent;
 			}
 			return cur;
@@ -280,23 +284,31 @@ public:
 		//  Преинкремент - следующий элемент множества
 		iterator & operator++()
 		{
+			if (isNil())
+				throw std::exception("Nil iterator");
 			*this =  iterator(next(data));
 			return *this;
 		}
 		//  Предекремент - переход на предыдущий элемент множества
 		iterator & operator--()
 		{
+			if (isNil())
+				throw std::exception("Nil iterator");
 			*this = iterator(previous(data));
 			return *this;
 		}
 		//  Постинкремент
 		iterator operator++(int) {
+			if (isNil())
+				throw std::exception("Nil iterator");
 			iterator temp = *this;
 			*this = iterator(next(data));
 			return temp;
 		}
 		//  Постдекремент
 		iterator operator--(int) {
+			if (isNil())
+				throw std::exception("Nil iterator");
 			iterator temp = *this;
 			*this = iterator(previous(data));
 			return temp;
@@ -309,7 +321,7 @@ public:
 
 		friend bool operator == (const iterator & it_1, const iterator & it_2)
 		{
-			return *it_1 == *it_2;
+			return it_1.data == it_2.data;
 		}
 		
 		//  Эти операции не допускаются между прямыми и обратными итераторами
@@ -343,10 +355,12 @@ public:
 private:
 	template <class RandomIterator>
 	void ordered_insert(RandomIterator first, RandomIterator last, iterator position) {
-		if (first >= last) return;
+		if (!(first < last)) return;
 		RandomIterator center = first + (last - first)/2 ;
 		iterator new_pos = insert(position, *center);  //  итератор на вставленный элемент
+		
 		ordered_insert(first, center, position);
+		
 		ordered_insert(center + 1, last, ++position);
 	}
 
@@ -355,9 +369,10 @@ public:
 	Binary_Search_Tree(InputIterator first, InputIterator last, Compare comparator = Compare(), AllocType alloc = AllocType()) : dummy(make_dummy()), cmp(comparator), Alc(alloc)
 	{
 		//  Проверка - какой вид итераторов нам подали на вход
-		if (std::is_same<typename std::iterator_traits<InputIterator>::iterator_category, typename std::random_access_iterator_tag>::value) {
+		if constexpr(std::is_same<typename std::iterator_traits<InputIterator>::iterator_category, typename std::random_access_iterator_tag>::value) {
 			//  Если итератор произвольного доступа, то есть надежда, что диапазон отсортирован
 			//    а даже если и нет - не важно, всё равно попробуем метод деления пополам для вставки
+			
 			ordered_insert(first, last, end());
 		}
 		else
@@ -431,7 +446,8 @@ public:
 	std::pair<iterator, bool> insert(const T & value)
 	{
 		Node* resn = dummy;
-		if (dummy->parent.isNil)
+		
+		if (dummy->parent->isNil)
 		{
 			resn = make_node(value,dummy,dummy,dummy);
 			dummy->parent = resn;
@@ -487,8 +503,8 @@ public:
 					node = node->right;
 				}
 			}
-			newnode = make_node(node, x, dummy, dummy);
-
+			newnode = make_node(x, node, dummy, dummy);
+			tree_size++;
 			return iterator(newnode);
 		}
 		throw std::exception("Wrong position");
@@ -507,14 +523,14 @@ public:
 		while (!current._data()->isNil)
 		{
 			if (cmp(value, *current)) {
-				if ((*current.Left())->isNil)
+				if (current.Left().isNil())
 					current = current.Left();
 				else
 					return iterator(dummy);
 			}
 			else {
 				if (!cmp(value, *current)) {
-					if ((*current.Right())->isNil)
+					if (current.Right().isNil())
 						current = current.Right();
 					else
 						return iterator(dummy);
@@ -627,8 +643,9 @@ public:
 		//  Если фиктивный элемент, то ошибка - такого не должно происходить
 		if (elem.isNil()) 
 			throw std::exception("elem is nil!");
+		tree_size--;
 		if (elem.Left().isNil() && elem.Right().isNil()) {
-			delete_leaf();
+			delete_leaf(elem);
 		}
 		else {
 			if (elem.Left().isNil()) {
@@ -650,16 +667,20 @@ public:
 	
 	size_type erase(const value_type& elem) {
 		iterator it = find(elem);
-		if (it.isNil())
+		if (it._data()->isNil)
 			return 0;
+		tree_size--;
 		erase(it);
 		return 1;
 	}
 	
-	//  Проверить!!! todo
+	//  Проверить!!!
 	iterator erase(const_iterator first, const_iterator last) {
 		while (first != last)
-			first = erase(first);
+		{
+			erase(first);
+			first++;
+		}
 		return last;
 	}
 
