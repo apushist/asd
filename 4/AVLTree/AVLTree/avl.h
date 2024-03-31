@@ -41,7 +41,7 @@ class AVLTree {
 		}
 
 		friend bool operator==(const Node& n1, const Node& n2) {//так как дерево без повторов, можно сравнивать значения
-			return cmp(n1.value, n2.value) == 0;
+			return n1.value==n2.value;
 		}
 	};
 	
@@ -196,6 +196,67 @@ protected:
 
 		return newNode;
 	}
+
+	Node* balance(Node* node) {
+		node->fixheight();
+		if (node->bfactor() == 2) {
+			if(!node->right->isNil && node->right->bfactor() < 0)
+				node->right = rotateRight(node->right);
+			return rotateLeft(node);
+		}
+
+		if (node->bfactor() == -2) {
+			if (!node->left->isNil && node->left->bfactor() > 0)
+				node->left = rotateLeft(node->left);
+			return rotateRight(node);
+		}
+
+		return node;
+
+	}
+
+
+public:
+	
+	iterator insert(T value) {
+		Node* node = new Node(value);
+		if (dummy->parent->isNil) {
+			dummy->parent = node;
+			dummy->left = node;
+			return iterator(node);
+		}
+		Node* cur = dummy->parent;
+		while (true) {
+			if (cmp(cur->value, value)) {
+				if (cur->left->isNil) {
+					node->parent = cur;
+					cur->left = node;
+					break;
+
+				}
+				else {
+					cur = cur->left;
+				}
+			}
+			else {
+				if (cmp(value, cur->value)) {
+					if (cur->right->isNil) {
+						node->parent = cur;
+						cur->right = node;
+						break;
+					}
+					else {
+						cur = cur->right;
+					}
+				}
+				else {
+					return iterator(dummy);
+				}
+			}
+		}//todo
+		return iterator(balance(node));
+	}
+
 
 
 
