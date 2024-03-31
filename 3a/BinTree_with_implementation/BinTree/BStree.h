@@ -212,14 +212,14 @@ public:
 		//  Поиск «самого левого» элемента
 		iterator GetMin() {
 			Node* node = data;
-			while (node->left && node->left->isNil)
+			while (!node->left->isNil)
 				node = node->left;
 			return iterator(node);
 		}
 		//  Поиск «самого правого» элемента
 		iterator GetMax() {
 			Node* node = data;
-			while (node->right && node->right->isNil)
+			while (!node->right->isNil)
 				node = node->right;
 			return iterator(node);
 		}
