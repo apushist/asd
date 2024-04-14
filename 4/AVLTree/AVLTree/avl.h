@@ -3,7 +3,8 @@
 #include <iterator>
 #include <exception>
 #include <initializer_list>
-
+#include <stack>
+#include <algorithm>
 
 template<typename T, class Compare = std::less<T>>
 class AVLTree {
@@ -19,15 +20,15 @@ class AVLTree {
 
 	public:
 		T value;
-		unsigned char height;//-1 0 1
+		unsigned char height;
 		Node* parent;
 		Node* left;
 		Node* right;
 		bool isNil;
-		Node(T val = T(), Node* p = nullptr, Node* l = nullptr, Node* r = nullptr, bool nil = false) :
-			parent(p), value(val), left(l), right(r), isNil(false),height(1) {
-			make_node(p, l, r);
-		}
+
+		
+		Node() :parent(nullptr), value(T()), left(nullptr), 
+			right(nullptr), isNil(false),height(1) {}
 
 
 
@@ -36,8 +37,10 @@ class AVLTree {
 			return right->height - left->height;
 		}
 
-		void fixheight()
+		 void fixheight()
 		{
+			 if (this == nullptr)
+				 return;
 			unsigned char hl = left->height;
 			unsigned char hr = right->height;
 			height = (hl > hr ? hl : hr) + 1;
@@ -53,34 +56,60 @@ class AVLTree {
 
 		Node* getMin() {
 			Node* res = this;
-			while (res->left->isNil)
+			if (isNil)
+				return res;
+			while (!res->left->isNil)
 				res = res->left;
 			return res;
 		}
 
 		Node* getMax() {
 			Node* res = this;
-			while (res->right->isNil)
+			if (isNil)
+				return res;
+			while (!res->right->isNil)
 				res = res->right;
 			return res;
 		}
 
-	private:
-
-		void make_node(Node* p, Node* l, Node* r) {
-
-			if (!p)
-				parent = dummy;
-			if (!l)
-				left = dummy;
-			if (!r)
-				right = dummy;
+		bool isRight() {
+			if (parent->isNil)
+				return false;
+			return parent->right == this;
 		}
+
+		bool isLeft() {
+			if (parent->isNil)
+				return false;
+			return parent->left == this;
+		}
+		
 	};
 	
+	Node* make_node(T val = T(), Node* p = nullptr, Node* l = nullptr, Node* r = nullptr, bool nil = false) {
+		Node* res = new Node();
+		res->value = val;
+		res->parent = p? p: dummy;
+		res->left = l? l : dummy;
+		res->right = r? r : dummy;
+		res->isNil = nil;
+		
+		return res;
+	}
+
+	Node* make_dummy() {
+		Node* res = new Node();
+		res->value = T();
+		res->parent = res->left = res->right = res;
+		res->isNil = true;
+		res->height = 0;
+		return res;
+	}
 
 
 public:
+
+
 	
 	class iterator {
 
@@ -89,18 +118,22 @@ public:
 
 	private:
 
+		Compare cmp = Compare();
+
+	
+
 		Node* next(Node* node) {
 			Node* cur = node->right;
 			if (cur->isNil)
 			{
 				cur = node->parent;
-				while (!cur->isNil && cmp(cur->data, node->data))
+				while (!cur->isNil && cmp(cur->value, node->value))
 					cur = cur->parent;
 				
 			}
 			else
 			{
-				while (cur->left)
+				while (!cur->left->isNil)
 					cur = cur->left;
 			}
 			return cur;
@@ -111,8 +144,7 @@ public:
 			if (cur->isNil)
 			{
 				cur = node->parent;
-				Compare cmp = Compare();
-				while (!cur->isNil && cmp(node->data, cur->data))
+				while (!cur->isNil && cmp(node->value, cur->value))
 					cur = cur->parent;				
 			}
 			else
@@ -126,6 +158,8 @@ public:
 	public:
 
 		Node* current;
+
+		iterator(Node* node):current(node){}
 
 		bool IsRight() {
 			if (current->parent->isNil)
@@ -181,6 +215,10 @@ public:
 			return !(it1 == it2);
 		}
 
+		T getValue() {
+			return current->value;
+		}
+
 	};
 
 
@@ -197,7 +235,17 @@ public:
 
 
 protected:
-
+	void setParents(Node* node, Node* newNode) {
+		
+		newNode->parent = node->parent;
+		if (node->isLeft()) {
+			node->parent->left = newNode;
+		}
+		if (node->isRight()) {
+			node->parent->right = newNode;
+		}
+		node->parent = newNode;
+	}
 
 	Node* rotateRight(Node* node) {
 		if (node->isNil) {
@@ -207,13 +255,14 @@ protected:
 		Node* newNode = node->left;
 
 		node->left = newNode->right;
+		newNode->right->parent = node;
 		newNode->right = node;
+
+		setParents(node, newNode);
 
 		node->fixheight();
 		newNode->fixheight();
 
-		if(node == dummy->parent)
-			dummy->parent = newNode;
 
 		return newNode;
 	}
@@ -226,20 +275,25 @@ protected:
 
 		Node* newNode = node->right;
 		node->right = newNode->left;
+		newNode->left->parent = node;
 		newNode->left = node;
+
+		setParents(node, newNode);
 
 		node->fixheight();
 		newNode->fixheight();
 
-		if (node == dummy->parent)
-			dummy->parent = newNode;
 
 		return newNode;
 	}
 
+
 	iterator balance(iterator it) {
+		
 		Node* node = it.current;
+
 		node->fixheight();
+		
 		if (node->bfactor() == 2) {
 			if(!node->right->isNil && node->right->bfactor() < 0)
 				node->right = rotateRight(node->right);
@@ -253,66 +307,82 @@ protected:
 		}
 
 		return it;
-
 	}
 
+
+
 	void balanceAll() {
-		
-		iterator current = begin();
-		while (current != end())
-		{
-			current = balance(current++);
+		Node* root = dummy->parent;
+		while (!root->parent->isNil) {
+			root = root->parent;
 		}
+		dummy->parent = root;
+		bah(dummy->parent);
+	}
+
+	void bah(Node* node) {
+		if (node->isNil)
+			return;
+		bah(node->left);
+		bah(node->right);
+		balance(node);
 	}
 
 
 public:
 	
+
+	
 	iterator insert(T value) {
-		Node* node = new Node(value);
-		if (dummy->parent->isNil) {
-			dummy->parent = node;
-			dummy->left = node;
+		if (dummy->parent->isNil) { 
+			dummy->parent = make_node(value);
+			dummy->left = dummy->parent;
 			tree_size++;
-			return iterator(node);
+			return iterator(dummy->parent);
 		}
-		Node* cur = dummy->parent;
-		while (true) {
-			if (cmp(value, cur->value)) {
-				if (cur->left->isNil) {
-					node->parent = cur;
-					cur->left = node;
-					break;
 
-				}
-				else {
-					cur = cur->left;
-				}
+		Node* current = dummy->parent;
+		Node* parent = nullptr;
+
+		
+		while (!current->isNil) {
+			parent->fixheight();
+			parent = current;
+			if (cmp(value, current->value)) {
+				current = current->left;
 			}
-			else {
-				if (cmp(cur->value, value)) {
-					if (cur->right->isNil) {
-						node->parent = cur;
-						cur->right = node;
-						
-						break;
-
-					}
-					else {
-						cur = cur->right;
-					}
-				}
-				else {
-					return iterator(dummy);
-				}
+			else if (cmp(current->value, value)) {
+				current = current->right;
+			}
+			else { 
+				return iterator(parent);
 			}
 		}
+
 		tree_size++;
-		balanceAll();
-		return iterator(node);
+
+		Node* newNode = make_node(value, parent, dummy, dummy);
+		if (cmp(value, parent->value)) {
+			parent->left = newNode;
+		}
+		else {
+			parent->right = newNode;
+		}
+		dummy->left = dummy->parent->getMin();
+		balanceAll(); 
+		return balance(iterator(newNode));
+
+	
+	}
+
+	template <class InputIterator>
+	iterator insert(InputIterator first, InputIterator last) {
+		std::for_each(first, last, [this](T x) { insert(x); });
 	}
 
 private:
+
+
 	Node* recur_copy_tree(Node* source, const Node* source_dummy)
 	{
 		Node* left_sub_tree;
@@ -327,7 +397,7 @@ private:
 		else
 			right_sub_tree = dummy;
 
-		Node* current = new Node(source->value, nullptr, left_sub_tree, right_sub_tree);
+		Node* current = make_node(source->value, nullptr, left_sub_tree, right_sub_tree);
 		if (source->right != source_dummy)
 			current->right->parent = current;
 		if (source->left != source_dummy)
@@ -338,18 +408,18 @@ private:
 public:
 
 	AVLTree(Compare comparator = Compare()) {
-		dummy = new Node(T());
-		dummy->isNil = true;
+		dummy = make_dummy();
 	}
 	
 	AVLTree(std::initializer_list<T> il) {
-		dummy = new Node(T());
-		dummy->isNil = true;
+		dummy = make_dummy();
 		for (T x : il)
 			insert(x);
+		
 	}
 
 	AVLTree(const AVLTree& other) {
+		dummy = make_dummy();
 		tree_size = other.tree_size;
 		if (other.empty())
 			return;
@@ -400,10 +470,11 @@ public:
 		return iterator(dummy);
 	}
 
-	void erase(T value) {
-		Node* node = find(value).current;
+	void erase(iterator it) {
+		Node* node = it.current;
 		if (node->isNil)
 			return;
+		tree_size--;
 		Node* parent = node->parent;
 		if (node->right->isNil) {
 			deleteElem(parent, node, node->left);
@@ -424,9 +495,13 @@ public:
 					deleteElem(change->parent, change, change->right);
 			}
 		}
-		dummy->left = dummy->parent->getMin();
+		if(tree_size > 0)
+			dummy->left = dummy->parent->getMin();
 		balanceAll();
+	}
 
+	void erase(T value) {
+		erase(find(value));
 	}
 
 private:
@@ -446,36 +521,174 @@ private:
 
 public:
 
-	friend bool operator==(const AVLTree& t1, const AVLTree& t2) {
-		iterator it1 = t1.begin();
-		iterator it2 = t2.begin();
-		for (;it1 != t1.end() && it2 != t2.end();++it1, ++it2) {
-			if (it1.current != it2.current) {
-				return false;
-			}
-
-		}
-		return it1 == t1.end() && it2 == t2.end();
+	friend bool operator==(const AVLTree& tree1, const AVLTree& tree2) {
+		Node* r1 = tree1.dummy->parent;
+		Node* r2 = tree2.dummy->parent;
+		return helpEqual(r1, r2);
 	}
+
+private:
+	bool static helpEqual(Node* r1, Node* r2) {
+		return (!r1->isNil && !r2->isNil) ? (r1->value == r2->value && helpEqual(r1->left, r2->left) && helpEqual(r1->right, r2->right)) : (r1->isNil && r2->isNil);
+	}
+
+	void clearHelper(Node* node) {
+		if (!node->isNil) {
+			clearHelper(node->left); 
+			clearHelper(node->right); 
+			delete node;
+		}
+	}
+public:
 
 	friend bool operator!=(const AVLTree& t1, const AVLTree& t2) {
 		return !(t1 == t2);
 	}
 
 	void clear() {
-		iterator cur = begin();
-		for (;cur != end();++cur) {
-			erase(cur.current->value);
-			tree_size = 0;
-			dummy->parent = dummy->left = dummy->right = dummy;
-		}
+		clearHelper(dummy->parent);
+		dummy->parent = dummy->left = dummy->right = dummy;
+		tree_size = 0;
 	}
 
+	iterator upper_bound(T value) {
+		Node* res = nullptr;
+		Node* cur = dummy->parent;
+		while (!cur->isNil)
+		{
+			if (!cmp(cur->value, value)) {
+				res = cur;
+				cur = cur->left;
+			}
+			else {
+				cur = cur->right;
+			}
+
+		}
+		return res? iterator(res):iterator(dummy);
+	}
+
+	iterator lower_bound(T value) {
+		Node* res = nullptr;
+		Node* cur = dummy->parent;
+		while (!cur->isNil)
+		{
+			if (!cmp(value, cur->value)) {
+				res = cur;
+				cur = cur->right;
+			}
+			else
+				cur = cur->left;
+		}
+		return res ? iterator(res) : iterator(dummy);
+	}
+
+	void printLKP() {
+		Node* cur = dummy->parent;
+		helpLKP(cur);
+		std::cout << "\n";
+	}
+
+private:
+
+	void helpLKP(Node* node) {
+		if (node->isNil)
+			return;
+		helpLKP(node->left);
+		std::cout << node->value << " ";
+		helpLKP(node->right);
+	}
+
+public:
 
 	Compare key_comp() const noexcept { return cmp; }
 	Compare value_comp() const noexcept { return cmp; }
 
 	~AVLTree() {
 		clear();
+		delete dummy;
+	}
+};
+
+template<typename T, class Compare = std::less<T>, class Allocator = std::allocator<T>>
+class mySet {
+	AVLTree tree;
+
+	using AllocType = typename std::allocator_traits<Allocator>::template rebind_alloc < Node >;
+	
+	AllocType Alc;
+
+	Compare cmp = Compare();
+
+public:
+
+	using iterator = AVLTree::iterator;
+	using const_iterator = AVLTree::iterator;
+
+	mySet(Compare comparator = Compare(), AllocType alc = AllocType()) {
+		tree = new AVLTree<T, Compare>(comparator);
+		Alc = alc;
+		cmp = comparator;
+	}
+
+	mySet(const mySet& other) {
+		tree = other.tree;
+	}
+
+	mySet(mySet&& other) {
+		tree = other.tree;
+		delete other;
+	}
+
+	mySet(std::initializer_list<T> il) {
+		tree = new AVLTree<T, Compare>(il);
+	}
+
+	template <class InputIterator>
+	mySet(InputIterator first, InputIterator last, Compare comparator = Compare(), AllocType alloc = AllocType()) {
+		tree.insert(first, last);
+		Alc = alc;
+		cmp = comparator;
+	}
+
+	const mySet& operator=(const mySet& other) {
+		if (this == &other) return *this;
+
+		mySet tmp{ other };
+		swap(other);
+
+		return *this;
+	}
+
+	AllocType get_allocator() {
+		return Alc;
+	}
+
+	size_t size() {
+		return tree.size();
+	}
+
+	bool empty() {
+		return tree.empty();
+	}
+
+	iterator begin() const noexcept { return tree.begin(); }
+	iterator end() const noexcept { return tree.end(); }
+
+	void clear() {
+		tree.clear();
+	}
+
+	void swap(mySet& other) noexcept {
+		tree.swap(other.tree);
+	}
+
+	template <class InputIterator>
+	iterator insert(InputIterator first, InputIterator last) {
+		return tree.insert(first, last);
+	}
+
+	iterator insert(T value) {
+		tree.insert(value);
 	}
 };

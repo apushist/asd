@@ -82,8 +82,9 @@ namespace TreeTest
 
 		//  Для того, чтобы выполнить тестирование одного из указанных контейнеров (std::set или Binary_Tree_Search)
 		//    должна быть раскомментирована одна из следующих строк:
-		template<typename T> using ContainerTemplate = std::set<T, Mypred<T>, Myal<T>>;
+		//template<typename T> using ContainerTemplate = std::set<T, Mypred<T>, Myal<T>>;
 		//template<typename T> using ContainerTemplate = Binary_Search_Tree<T, Mypred<T>, Myal<T>>;
+		template<typename T> using ContainerTemplate = mySet<T, Mypred<T>, Myal<T>>;
 
 		using Mycont = ContainerTemplate<char>;
 
@@ -136,8 +137,8 @@ namespace TreeTest
 
 			Mycont::iterator p_it(v1.begin());
 			Mycont::const_iterator p_cit(v4.begin());
-			Mycont::reverse_iterator p_rit(v1.rbegin());
-			Mycont::const_reverse_iterator p_crit(v4.rbegin());
+			/*Mycont::reverse_iterator p_rit(v1.rbegin());
+			Mycont::const_reverse_iterator p_crit(v4.rbegin());*/
 
 			/*Assert::IsTrue(*p_it == 'a' && *--(p_it = v1.end()) == 'c', L"Декремент end() не корректен?");
 			Assert::IsTrue(*p_cit == 'a' && *--(p_cit = v4.end()) == 'c', L"Декремент для const iterator на end() не корректен?");
@@ -145,7 +146,7 @@ namespace TreeTest
 			Assert::IsTrue(*p_crit == 'c' && *--(p_crit = v4.rend()) == 'a', L"Const reverse iterator не корректен?");*/
 		}
 
-		TEST_METHOD(SetInsertEraseTests)
+		TEST_METHOD(SetinsertEraseTests)
 		{
 			char carr[] = "abc", carr2[] = "def";
 			Mycont v0;
@@ -161,8 +162,8 @@ namespace TreeTest
 
 			Mycont::iterator p_it(v1.begin());
 			Mycont::const_iterator p_cit(v4.begin());
-			Mycont::reverse_iterator p_rit(v1.rbegin());
-			Mycont::const_reverse_iterator p_crit(v4.rbegin());
+			/*Mycont::reverse_iterator p_rit(v1.rbegin());
+			Mycont::const_reverse_iterator p_crit(v4.rbegin());*/
 
 			v0.clear();
 			std::pair<Mycont::iterator, bool> pib = v0.insert('d');
