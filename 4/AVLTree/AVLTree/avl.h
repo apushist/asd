@@ -47,7 +47,7 @@ class AVLTree {
 		}
 
 		friend bool operator==(const Node& n1, const Node& n2) {//так как дерево без повторов, можно сравнивать значения
-			return n1.value==n2.value;
+			return n1.value==n2.value && n1.isNil == n2.isNil;
 		}
 
 		friend bool operator!=(const Node& n1, const Node& n2) {
@@ -219,6 +219,10 @@ public:
 			return current->value;
 		}
 
+		inline const T& operator*() const {
+			return getValue();
+		}
+
 	};
 
 
@@ -380,6 +384,25 @@ public:
 		std::for_each(first, last, [this](T x) { insert(x); });
 	}
 
+	iterator insert(iterator pos, T value) {
+		iterator prev = --pos;
+		if ((pos == begin() || cmp(prev.getValue(), x)) && cmp(x, pos.getValue())) {
+			Node* node = pos.current;
+			
+			if (!node->left->isNil) {
+				node = node->left;
+				while (!node->right->isNil)
+				{
+					node = node->right;
+				}
+			}
+			Node* newnode = make_node(value, node, dummy, dummy);
+			tree_size++;
+			return iterator(newnode);
+		}
+		throw std::exception("Wrong position");
+	}
+
 private:
 
 
@@ -470,10 +493,11 @@ public:
 		return iterator(dummy);
 	}
 
-	void erase(iterator it) {
+	iterator erase(iterator it) {
 		Node* node = it.current;
+		iterator res = it++;
 		if (node->isNil)
-			return;
+			return iterator(dummy);
 		tree_size--;
 		Node* parent = node->parent;
 		if (node->right->isNil) {
@@ -498,10 +522,18 @@ public:
 		if(tree_size > 0)
 			dummy->left = dummy->parent->getMin();
 		balanceAll();
+		return res;
 	}
 
-	void erase(T value) {
-		erase(find(value));
+	size_t erase(T value) {
+		return erase(find(value)).current->isNil? 0:1;
+	}
+
+	template <class InputIterator>
+	iterator erase(InputIterator first, InputIterator last) {
+		bool res = last++;
+		std::for_each(first, last, [this](T x) { erase(x)); });
+		return res;
 	}
 
 private:
@@ -612,7 +644,7 @@ public:
 
 template<typename T, class Compare = std::less<T>, class Allocator = std::allocator<T>>
 class mySet {
-	AVLTree tree;
+	AVLTree<T, Compare> tree;
 
 	using AllocType = typename std::allocator_traits<Allocator>::template rebind_alloc < Node >;
 	
@@ -622,8 +654,8 @@ class mySet {
 
 public:
 
-	using iterator = AVLTree::iterator;
-	using const_iterator = AVLTree::iterator;
+	using iterator = AVLTree<T, Compare>::iterator;
+	using const_iterator = AVLTree<T, Compare>::iterator;
 
 	mySet(Compare comparator = Compare(), AllocType alc = AllocType()) {
 		tree = new AVLTree<T, Compare>(comparator);
@@ -689,6 +721,55 @@ public:
 	}
 
 	iterator insert(T value) {
-		tree.insert(value);
+		return tree.insert(value);
+	}
+
+	iterator insert(iterator pos,T value) {
+		return tree.insert(pos,value);
+	}
+
+	iterator erase(iterator it) {
+		return tree.erase(it);
+	}
+
+	size_t erase(T value) {
+		return tree.erase(value);
+	}
+
+	template <class InputIterator>
+	iterator erase(InputIterator first, InputIterator last) {
+		return tree.erase(first, last);
+	}
+
+	friend bool operator==(const mySet& s1, const mySet& s2) {
+		return s1.tree == s2.tree;
+	}
+
+	friend bool operator!=(const mySet& s1, const mySet& s2) {
+		return !(s1 == s2);
+	}
+
+	Compare key_comp() const noexcept { return cmp; }
+	Compare value_comp() const noexcept { return cmp; }
+
+	size_t count(const T& key) const {
+		return tree.find(key).current->isNil ? 0 : 1;
+	}
+
+	iterator lower_bound(T value) {
+		return tree.lower_bound(value);
+	}
+
+	iterator upper_bound(T value) {
+		return tree.upper_bound(value);
+	}
+
+	iterator find(T value) {
+		return tree.find(value);
+	}
+
+	std::pair<const_iterator, const_iterator> equal_range(const T& key) {
+		const_iterator res = tree.find(key);
+		return {res,res};
 	}
 };
