@@ -5,16 +5,22 @@
 #include <initializer_list>
 #include <stack>
 #include <algorithm>
+#include <utility>
+
 
 template<typename T, class Compare = std::less<T>>
 class AVLTree {
 
 	Compare cmp = Compare();
 	size_t tree_size = 0;
+public:
 
 	class Node;
 
+private:
+
 	Node* dummy;
+public:
 
 	class Node {
 
@@ -86,6 +92,7 @@ class AVLTree {
 		
 	};
 	
+private:
 	Node* make_node(T val = T(), Node* p = nullptr, Node* l = nullptr, Node* r = nullptr, bool nil = false) {
 		Node* res = new Node();
 		res->value = val;
@@ -173,6 +180,9 @@ public:
 			return current->parent->left == current;
 		}
 
+		bool isNil() {
+			return current->isNil;
+		}
 
 
 		iterator& operator++() {
@@ -193,17 +203,22 @@ public:
 		}
 
 		iterator& operator--() {
-			if (current->isNil)
-				throw std::exception("Nil iterator");
-			current = previous(current);
+			if (current->isNil) {
+				//current = dummy->parent;
+				//current = current->getMax();
+			}
+			else
+				current = previous(current);
 			return *this;
 		}
 
 		iterator operator--(int) {
-			if (current->isNil)
 				throw std::exception("Nil iterator");
 			iterator temp = *this;
-			current = previous(current);
+			if (current->isNil)
+				current = dummy->parent->getMax();
+			else
+				current = previous(current);
 			return temp;
 		}
 
@@ -220,7 +235,7 @@ public:
 		}
 
 		inline const T& operator*() const {
-			return getValue();
+			return current->value;
 		}
 
 	};
@@ -313,15 +328,17 @@ protected:
 		return it;
 	}
 
-
-
-	void balanceAll() {
+	void fixRoot() {
 		Node* root = dummy->parent;
 		while (!root->parent->isNil) {
 			root = root->parent;
 		}
 		dummy->parent = root;
+	}
+
+	void balanceAll() {
 		bah(dummy->parent);
+		fixRoot();
 	}
 
 	void bah(Node* node) {
@@ -359,7 +376,7 @@ public:
 				current = current->right;
 			}
 			else { 
-				return iterator(parent);
+				return iterator(dummy);
 			}
 		}
 
@@ -380,13 +397,14 @@ public:
 	}
 
 	template <class InputIterator>
-	iterator insert(InputIterator first, InputIterator last) {
+	void insert(InputIterator first, InputIterator last) {
 		std::for_each(first, last, [this](T x) { insert(x); });
+
 	}
 
 	iterator insert(iterator pos, T value) {
 		iterator prev = --pos;
-		if ((pos == begin() || cmp(prev.getValue(), x)) && cmp(x, pos.getValue())) {
+		if ((pos == begin() || cmp(prev.getValue(), value)) && cmp(value, pos.getValue())) {
 			Node* node = pos.current;
 			
 			if (!node->left->isNil) {
@@ -475,7 +493,7 @@ public:
 		std::swap(tree_size, other.tree_size);
 	}
 
-	iterator find(T value) {
+	iterator find(T value) const {
 		Node* cur = dummy->parent;
 		while (!cur->isNil) {
 			if (cmp(value, cur->value)) {
@@ -519,20 +537,22 @@ public:
 					deleteElem(change->parent, change, change->right);
 			}
 		}
-		if(tree_size > 0)
+		if (tree_size > 0)
 			dummy->left = dummy->parent->getMin();
+		else
+			dummy->left = dummy;
 		balanceAll();
 		return res;
 	}
 
 	size_t erase(T value) {
-		return erase(find(value)).current->isNil? 0:1;
+		return erase(find(value)).isNil() ? 0 : 1;
 	}
 
 	template <class InputIterator>
 	iterator erase(InputIterator first, InputIterator last) {
-		bool res = last++;
-		std::for_each(first, last, [this](T x) { erase(x)); });
+		iterator res = last++;
+		std::for_each(first, last, [this](T x) { erase(x); });
 		return res;
 	}
 
@@ -583,12 +603,12 @@ public:
 		tree_size = 0;
 	}
 
-	iterator upper_bound(T value) {
+	iterator upper_bound(T value) const {
 		Node* res = nullptr;
 		Node* cur = dummy->parent;
 		while (!cur->isNil)
 		{
-			if (!cmp(cur->value, value)) {
+			if (cmp(value, cur->value)) {
 				res = cur;
 				cur = cur->left;
 			}
@@ -600,7 +620,7 @@ public:
 		return res? iterator(res):iterator(dummy);
 	}
 
-	iterator lower_bound(T value) {
+	iterator lower_bound(T value) const {
 		Node* res = nullptr;
 		Node* cur = dummy->parent;
 		while (!cur->isNil)
@@ -644,9 +664,9 @@ public:
 
 template<typename T, class Compare = std::less<T>, class Allocator = std::allocator<T>>
 class mySet {
-	AVLTree<T, Compare> tree;
+	AVLTree<T, Compare>* tree;
 
-	using AllocType = typename std::allocator_traits<Allocator>::template rebind_alloc < Node >;
+	using AllocType = typename std::allocator_traits<Allocator>::template rebind_alloc < AVLTree<T, Compare>::Node >;
 	
 	AllocType Alc;
 
@@ -654,8 +674,8 @@ class mySet {
 
 public:
 
-	using iterator = AVLTree<T, Compare>::iterator;
-	using const_iterator = AVLTree<T, Compare>::iterator;
+	using iterator = typename AVLTree<T, Compare>::iterator;
+	using const_iterator = iterator;
 
 	mySet(Compare comparator = Compare(), AllocType alc = AllocType()) {
 		tree = new AVLTree<T, Compare>(comparator);
@@ -669,7 +689,7 @@ public:
 
 	mySet(mySet&& other) {
 		tree = other.tree;
-		delete other;
+		delete other.tree;
 	}
 
 	mySet(std::initializer_list<T> il) {
@@ -678,8 +698,9 @@ public:
 
 	template <class InputIterator>
 	mySet(InputIterator first, InputIterator last, Compare comparator = Compare(), AllocType alloc = AllocType()) {
-		tree.insert(first, last);
-		Alc = alc;
+		tree = new AVLTree<T, Compare>(comparator);
+		tree->insert(first, last);
+		Alc = alloc;
 		cmp = comparator;
 	}
 
@@ -687,7 +708,7 @@ public:
 		if (this == &other) return *this;
 
 		mySet tmp{ other };
-		swap(other);
+		swap(tmp);
 
 		return *this;
 	}
@@ -697,48 +718,49 @@ public:
 	}
 
 	size_t size() {
-		return tree.size();
+		return tree->size();
 	}
 
 	bool empty() {
-		return tree.empty();
+		return tree->empty();
 	}
 
-	iterator begin() const noexcept { return tree.begin(); }
-	iterator end() const noexcept { return tree.end(); }
+	iterator begin() const noexcept { return tree->begin(); }
+	iterator end() const noexcept { return tree->end(); }
 
 	void clear() {
-		tree.clear();
+		tree->clear();
 	}
 
-	void swap(mySet& other) noexcept {
-		tree.swap(other.tree);
+	void swap(mySet& other)  {
+		tree->swap(*other.tree);
 	}
 
 	template <class InputIterator>
-	iterator insert(InputIterator first, InputIterator last) {
-		return tree.insert(first, last);
+	void insert(InputIterator first, InputIterator last) {
+		tree->insert(first, last);
 	}
 
-	iterator insert(T value) {
-		return tree.insert(value);
+	std::pair<iterator,bool> insert(T value) {
+		iterator res = tree->insert(value);
+		return std::make_pair(res,!res.isNil());
 	}
 
 	iterator insert(iterator pos,T value) {
-		return tree.insert(pos,value);
+		return tree->insert(pos, value);
 	}
 
 	iterator erase(iterator it) {
-		return tree.erase(it);
+		return tree->erase( it);
 	}
 
 	size_t erase(T value) {
-		return tree.erase(value);
+		return tree->erase(value);
 	}
 
 	template <class InputIterator>
 	iterator erase(InputIterator first, InputIterator last) {
-		return tree.erase(first, last);
+		return tree->erase(first, last);
 	}
 
 	friend bool operator==(const mySet& s1, const mySet& s2) {
@@ -752,24 +774,24 @@ public:
 	Compare key_comp() const noexcept { return cmp; }
 	Compare value_comp() const noexcept { return cmp; }
 
-	size_t count(const T& key) const {
-		return tree.find(key).current->isNil ? 0 : 1;
+	size_t count(T key) const {
+		return tree->find(key).isNil() ? 0 : 1;
 	}
 
-	iterator lower_bound(T value) {
-		return tree.lower_bound(value);
+	iterator lower_bound(T value) const {
+		return tree->lower_bound(value);
 	}
 
-	iterator upper_bound(T value) {
-		return tree.upper_bound(value);
+	iterator upper_bound(T value) const {
+		return tree->upper_bound(value);
 	}
 
-	iterator find(T value) {
-		return tree.find(value);
+	iterator find(T value) const {
+		return tree->find(value);
 	}
 
-	std::pair<const_iterator, const_iterator> equal_range(const T& key) {
-		const_iterator res = tree.find(key);
-		return {res,res};
+	std::pair<const_iterator, const_iterator> equal_range(const T& key) const {
+		const_iterator res = tree->find(key);
+		return std::make_pair(res++,res);
 	}
 };
