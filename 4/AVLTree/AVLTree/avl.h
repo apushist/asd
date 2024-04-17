@@ -6,6 +6,9 @@
 #include <stack>
 #include <algorithm>
 #include <utility>
+#include <queue>
+#include <fstream>
+#include <string>
 
 
 template<typename T, class Compare = std::less<T>>
@@ -306,22 +309,30 @@ protected:
 		return newNode;
 	}
 
+	unsigned int n = 0;
 
 	iterator balance(iterator it) {
-		
 		Node* node = it.current;
 
 		node->fixheight();
 		
 		if (node->bfactor() == 2) {
+			n++;
 			if(!node->right->isNil && node->right->bfactor() < 0)
+			{
 				node->right = rotateRight(node->right);
+				n++;
+			}
 			return iterator(rotateLeft(node));
 		}
 
 		if (node->bfactor() == -2) {
+			n++;
 			if (!node->left->isNil && node->left->bfactor() > 0)
+			{
 				node->left = rotateLeft(node->left);
+				n++;
+			}
 			return iterator(rotateRight(node));
 		}
 
@@ -390,6 +401,7 @@ public:
 			parent->right = newNode;
 		}
 		dummy->left = dummy->parent->getMin();
+		n = 0;
 		balanceAll(); 
 		return balance(iterator(newNode));
 
@@ -399,7 +411,6 @@ public:
 	template <class InputIterator>
 	void insert(InputIterator first, InputIterator last) {
 		std::for_each(first, last, [this](T x) { insert(x); });
-
 	}
 
 	iterator insert(iterator pos, T value) {
@@ -418,6 +429,8 @@ public:
 			tree_size++;
 			return iterator(newnode);
 		}
+		n = 0;
+		balanceAll();
 		throw std::exception("Wrong position");
 	}
 
@@ -541,6 +554,7 @@ public:
 			dummy->left = dummy->parent->getMin();
 		else
 			dummy->left = dummy;
+		n = 0;
 		balanceAll();
 		return res;
 	}
@@ -597,6 +611,10 @@ public:
 		return !(t1 == t2);
 	}
 
+	unsigned int getCountOfRotates() {
+		return n;
+	}
+
 	void clear() {
 		clearHelper(dummy->parent);
 		dummy->parent = dummy->left = dummy->right = dummy;
@@ -641,7 +659,62 @@ public:
 		std::cout << "\n";
 	}
 
+	void printLevels() {
+		Node* cur = dummy->parent;
+		std::queue<Node*> q;
+		q.push(cur);
+		int h = cur->height;
+		while (!q.empty()) {
+			cur = q.front();
+			q.pop();
+			
+			std::cout << cur->value << " ";
+			
+			if (!cur->left->isNil)
+				q.push(cur->left);
+			if (!cur->right->isNil)
+				q.push(cur->right);
+
+		}
+		std::cout << "\n";
+
+	}
+
+
+	void saveInFile(std::string filename) {
+		std::ofstream out(filename);     
+		if (out.is_open())
+		{
+			std::string str = getString();
+			std::cout << str;
+			out << str;
+		}
+		out.close();
+
+	}
+
 private:
+
+	std::string getString() {
+		std::string res = "";
+		Node* cur = dummy->parent;
+		std::queue<Node*> q;
+		q.push(cur);
+		int h = cur->height;
+		while (!q.empty()) {
+			cur = q.front();
+			q.pop();
+
+			res.append(std::to_string(cur->value) + " ");
+			
+			if (!cur->left->isNil)
+				q.push(cur->left);
+			if (!cur->right->isNil)
+				q.push(cur->right);
+
+		}
+		return res;
+	}
 
 	void helpLKP(Node* node) {
 		if (node->isNil)
@@ -793,5 +866,9 @@ public:
 	std::pair<const_iterator, const_iterator> equal_range(const T& key) const {
 		const_iterator res = tree->find(key);
 		return std::make_pair(res++,res);
+	}
+
+	void printSideView() {
+		tree->printLevels();
 	}
 };
