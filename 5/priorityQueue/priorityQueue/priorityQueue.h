@@ -8,6 +8,7 @@
 #include <initializer_list>
 #include <exception>
 #include <fstream>
+#include <queue>
 
 
 int SIZE = 2000;
@@ -36,19 +37,28 @@ void getWordsFromFile(const std::string& filename, Container& queue) {
 	}
 
 	std::string word;
-	int i = 0;
-	while (file >> word && i < SIZE) {
+	//int i = 0;
+	while (file >> word) {
 		
 		if (!word.empty()) {
 			//std::cout << word;
 			queue.push(word);
-			i++;
+			//i++;
 		}
 	}
 
 	file.close();
 }
 
+void merge_pq(std::priority_queue<int>& dest, std::priority_queue<int>& src) {
+	if (dest.size() < src.size()) {
+		std::swap(dest, src);
+	}
+	while (!src.empty()) {
+		dest.push(src.top());
+		src.pop();
+	}
+}
 
 template<typename T, typename Container = std::vector<T>, typename Compare = std::less<typename Container::value_type>>
 class myPriorityQueue1 {
