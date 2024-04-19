@@ -88,7 +88,7 @@ std::vector<int> task1(std::string filename) {
         S = diff;
         resInds.push_back(ind+1);
     }
-
+    std::sort(resInds.begin(), resInds.end());
     return resInds;
 }
 
