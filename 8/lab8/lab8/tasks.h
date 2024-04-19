@@ -101,13 +101,41 @@ std::vector<std::string> task15(std::string str, unsigned int n) {
     std::string line;
 
     while (iss >> word) {
-        if (line.size() + word.size() <= n) {
-            line += word + " "; 
+        if (line.empty()) {
+            line += word;
         }
-        else {
-            int additionalSpaces = n - line.size();
-            int wordCount = std::count(line.begin(), line.end(), ' ');
+        else
+        {
+            if (line.size() + word.size() < n) {
+                line += " " + word;
+            }
+            else {
+                
+                int spacesBetweenWordsCount = std::count(line.begin(), line.end(), ' ');
+                
+                int additionalSpaces = n - line.size();
+                int additionalSpacesPerWord = additionalSpaces / spacesBetweenWordsCount;
+                int extraSpaces = additionalSpaces % spacesBetweenWordsCount;
 
+                std::string alignedLine;
+                int ind = 0;
+                int endInd;
+                while ((endInd = line.find(' ', ind)) != std::string::npos) {
+                    alignedLine += line.substr(ind, endInd - ind+1);
+                    int countOfSpaces = additionalSpacesPerWord + (extraSpaces-- > 0 ? 1 : 0);
+                    alignedLine.append(countOfSpaces, ' ');
+                    ind = endInd + 1;
+                }
+                alignedLine += line.substr(ind);
+                result.push_back(alignedLine);
+
+                line = word;
+            }
         }
     }
+    if (!line.empty()) {
+        result.push_back(line);
+    }
+
+    return result;
 }
