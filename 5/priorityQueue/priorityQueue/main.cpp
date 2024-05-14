@@ -166,9 +166,14 @@ int main() {
 	//std::cout << q1.getMax() << "\n";
 	//q1.println();
 
-	testFunc();
+	//testFunc();
 
 	setlocale(LC_ALL, "Russian");
+
+	std::priority_queue<int> pq;
+	pq.push(0);
+	pq.push(42);
+	std::cout << pq.top() << "\n";
 
 	std::string filename = "voinaIMir.txt";
 
