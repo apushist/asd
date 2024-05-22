@@ -5,7 +5,7 @@
 #include "abstract_database.h"
 
 
-class LegacyDatabase : public AbstractDatabase {
+class MyDatabase : public AbstractDatabase {
 private:
 	std::vector<Post> posts;
 	std::vector<User> users;
