@@ -1,79 +1,168 @@
 #pragma once
 #include <iostream>
 #include <vector>
+#include <unordered_map>
 #include <algorithm>
+#include <utility>
+
 #include "abstract_database.h"
 
 
 class MyDatabase : public AbstractDatabase {
 private:
-	std::vector<Post> posts;
-	std::vector<User> users;
-
-	auto get_post_it(int ownerId, int postId) {
-		throw std::exception("Not implemented");
-	}
-
-	auto get_user_it(int id) {
-		throw std::exception("Not implemented");
-	}
+	//ключ - пара ownerId, id
+	std::unordered_map<std::pair<int,int>,Post> posts;
+	std::unordered_map<int, User> users;
 
 public:
-	void dump_tsv_posts(std::wostream& stream) {
-		throw std::exception("Not implemented");
-	}
-
-	void dump_tsv_users(std::wostream& stream) {
-		throw std::exception("Not implemented");
-	}
 
 	const Post& get_post(int ownerId, int postId) override {
-		throw std::exception("Not implemented");
+		std::pair<int, int> key = std::make_pair(ownerId, postId);
+		if (posts.find(key) != posts.end()) 
+			return posts[key];
 		throw DatabaseException("Post not found");
 	}
 
 	const User& get_user(int id) override {
-		throw std::exception("Not implemented");
+		if (users.find(id) != users.end())
+			return users[id];
 		throw DatabaseException("User not found");
 	}
 
 	void insert_post(const Post& post) override {
-		throw std::exception("Not implemented");
+		posts[std::make_pair(post.OwnerId,post.Id)] = post;
 	}
 
 	void insert_user(const User& user) override {
-		throw std::exception("Not implemented");
+		users[user.Id] = user;
 	}
 
 	void delete_post(int ownerId, int postId) override {
-		throw std::exception("Not implemented");
+		posts.erase(std::make_pair(ownerId, postId));
 	}
 
 	void like_post(int ownerId, int postId) override {
-		throw std::exception("Not implemented");
+		std::pair<int, int> key = std::make_pair(ownerId, postId);
+		if (posts.find(key) != posts.end()) {
+			posts[key].Likes++;
+		}
 	}
 
 	void unlike_post(int ownerId, int postId) override {
-		throw std::exception("Not implemented");
+		std::pair<int, int> key = std::make_pair(ownerId, postId);
+		if (posts.find(key) != posts.end()) {
+			if(posts[key].Likes > 0)
+				posts[key].Likes--;
+		}
 	}
 
 	void repost_post(int ownerId, int postId) override {
-		throw std::exception("Not implemented");
+		std::pair<int, int> key = std::make_pair(ownerId, postId);
+		if (posts.find(key) != posts.end()) {
+			posts[key].Reposts++;
+		}
 	}
 
 	std::vector<Post> top_k_post_by_likes(int k, int ownerId, int dateBegin, int dateEnd) override {
-		throw std::exception("Not implemented");
+		std::vector<Post> result; 
+		std::vector<std::pair<Post, int>> postsByLikes; // пост - количество лайков
+		for (const auto& pair : posts) {
+			const Post& post = pair.second;
+			if (post.OwnerId == ownerId && post.Date >= dateBegin && post.Date <= dateEnd) {
+				postsByLikes.push_back(std::make_pair(post, post.Likes));
+			}
+		}
+
+		std::sort(postsByLikes.begin(), postsByLikes.end(), 
+			[](const std::pair<Post, int>& a, const std::pair<Post, int>& b) {
+			return a.second > b.second;
+			});
+
+		for (int i = 0; i < k && i < postsByLikes.size(); ++i) {
+			result.push_back(postsByLikes[i].first);
+		}
+
+		return result;
 	}
 
 	std::vector<Post> top_k_post_by_reposts(int k, int ownerId, int dateBegin, int dateEnd) override {
-		throw std::exception("Not implemented");
+		std::vector<Post> result; 
+		std::vector<std::pair<Post, int>> postsByReposts; // пост - количество репостов
+		for (const auto& pair : posts) {
+			const Post& post = pair.second;
+			if (post.OwnerId == ownerId && post.Date >= dateBegin && post.Date <= dateEnd) {
+				postsByReposts.push_back(std::make_pair(post, post.Reposts));
+			}
+		}
+
+		std::sort(postsByReposts.begin(), postsByReposts.end(),
+			[](const std::pair<Post, int>& a, const std::pair<Post, int>& b) {
+				return a.second > b.second;
+			});
+
+		for (int i = 0; i < k && i < postsByReposts.size(); ++i) {
+			result.push_back(postsByReposts[i].first);
+		}
+
+		return result;
 	}
 
 	std::vector<UserWithLikes> top_k_authors_by_likes(int k, int ownerId, int dateBegin, int dateEnd) override {
-		throw std::exception("Not implemented");
+
+		std::vector<UserWithLikes> result;
+		
+		std::unordered_map<int, int> usersLikes;//authorID - likes
+		for (const auto& pair : posts) {
+			const Post& post = pair.second;
+			if (post.OwnerId == ownerId && post.Date >= dateBegin && post.Date <= dateEnd) {
+				usersLikes[post.FromId] += post.Likes;
+			}
+		}
+
+		std::vector<std::pair<int, int>> usersVector(usersLikes.begin(), usersLikes.end());
+
+		std::sort(usersVector.begin(), usersVector.end(), [](const std::pair<int, int>& a, const std::pair<int, int>& b) {
+			return a.second > b.second;
+			});
+
+		for (int i = 0; i < k && i < usersVector.size(); i++) {
+			std::pair<int,int> value = usersVector[i];
+			if(users.find(value.first) == users.end())
+				throw DatabaseException("User not found");
+			UserWithLikes userWithLikes = { users[value.first], value.second };
+			result.push_back(userWithLikes);
+		}
+
+		return result;
 	}
 
 	std::vector<UserWithReposts> top_k_authors_by_reports(int k, int ownerId, int dateBegin, int dateEnd) override {
-		throw std::exception("Not implemented");
+		std::vector<UserWithReposts> result;
+
+		std::unordered_map<int, int> usersReposts;//authorID - Reposts
+		for (const auto& pair : posts) {
+			const Post& post = pair.second;
+			if (post.OwnerId == ownerId && post.Date >= dateBegin && post.Date <= dateEnd) {
+				usersReposts[post.FromId] += post.Reposts;
+			}
+		}
+
+		std::vector<std::pair<int, int>> usersVector(usersReposts.begin(), usersReposts.end());
+
+		std::sort(usersVector.begin(), usersVector.end(), [](const std::pair<int, int>& a, const std::pair<int, int>& b) {
+			return a.second > b.second;
+			});
+
+		for (int i = 0; i < k && i < usersVector.size(); i++) {
+			std::pair<int, int> value = usersVector[i];
+			if (users.find(value.first) == users.end())
+				throw DatabaseException("User not found");
+			UserWithReposts userWithReposts = { users[value.first], value.second };
+			result.push_back(userWithReposts);
+		}
+
+		return result;
 	}
+
+
 };

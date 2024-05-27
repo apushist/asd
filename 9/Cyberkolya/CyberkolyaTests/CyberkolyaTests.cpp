@@ -3,6 +3,7 @@
 #include "CppUnitTest.h"
 #include "legacy_database.h"
 #include "cyberkolya.h"
+#include "my_database.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -20,7 +21,7 @@ namespace Microsoft { namespace VisualStudio { namespace CppUnitTestFramework {
 namespace CyberkolyaTests
 {
 	// !! Важно !! Поменять на свой класс !!
-	using Database = LegacyDatabase;
+	using Database = MyDatabase;
 
 
 	TEST_CLASS(Tests)

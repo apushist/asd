@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include "cyberkolya.h"
 #include "legacy_database.h"
+#include "my_database.h"
 
 #include <stdio.h>
 #include <fcntl.h>
@@ -16,6 +17,7 @@
 int main() {
 	_setmode(_fileno(stdout), _O_U16TEXT);
 	LegacyDatabase database;
+	//MyDatabase database;
 	Cyberkolya cyberkolya(database);
 	cyberkolya.read_from_files("../database/users.tsv",
 		{"../database/inside.tsv", "../database/teamtardis.tsv", "../database/insidenot.tsv", 
