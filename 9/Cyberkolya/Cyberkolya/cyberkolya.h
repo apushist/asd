@@ -11,7 +11,7 @@
 #include "abstract_database.h"
 
 
-template <class DT = std::chrono::milliseconds,
+template <class DT = std::chrono::microseconds,//:milliseconds,
 	class ClockT = std::chrono::steady_clock>
 class Timer
 {
