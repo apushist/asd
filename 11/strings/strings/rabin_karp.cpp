@@ -1,44 +1,61 @@
 #include "rabin_karp.h"
 
 
-const int k = 31, mod = 1e9 + 7;
 
-unsigned long long hashFunction(const char* str) {
-    unsigned long long hash = 0;
-    int c;
-    while ((c = *str++)) {
-        int x = (int)(c - 'a' + 1);
-        hash = (hash * k + x) % mod;
+
+int d = 2048;
+
+
+
+void search(char substr[], char text[], int q)
+{
+    int M = strlen(substr);
+    int N = strlen(text);
+    int i, j;
+    int p = 0; // hash value for substr
+    int t = 0; // hash value for text
+    int h = 1;
+
+    
+    for (i = 0; i < M - 1; i++)
+        h = (h * d) % q;
+
+    // Calculate the hash value of substr and first
+    // window of text
+    for (i = 0; i < M; i++) {
+        p = (d * p + substr[i]) % q;
+        t = (d * t + text[i]) % q;
     }
 
-    return hash;
-}
+   
+    for (i = 0; i <= N - M; i++) {
 
-std::vector<int> rabin_karp_search(const char* str, const char* substr)
-{
-    int hash;
-
-    std::vector<int> result;
-
-    unsigned int strLength = strlen(str);
-    unsigned int substrLength = strlen(substr);
-
-    unsigned long long strHash = hashFunction(str);
-    unsigned long long substrHash = hashFunction(substr);
-
-    for (int i = 0; i <= strLength - substrLength; i++) {
-        if (strHash == substrHash)
-        {
-            for (unsigned int k = 0; (k < substrLength) && (substr[k] == str[i + k]); k++) {
-                if (k == (substrLength - 1)) {
-                    result.push_back(i);
+       
+        if (p == t) {
+           
+            for (j = 0; j < M; j++) {
+                if (text[i + j] != substr[j]) {
+                    break;
                 }
             }
+
+            // if p == t and substr[0...M-1] = text[i, i+1,
+            // ...i+M-1]
+
+            if (j == M)
+                cout << "substrtern found at index " << i
+                << endl;
         }
 
-        
-        strHash = (p * strHash - pow(p, substrLength) * hashFunction(str[i]) + hashFunction(str[i + substrLength])) % r;
-    }
+        // Calculate hash value for next window of text:
+        // Remove leading digit, add trailing digit
+        if (i < N - M) {
+            t = (d * (t - text[i] * h) + text[i + M]) % q;
 
-    return result;
+            // We might get negative value of t, converting
+            // it to positive
+            if (t < 0)
+                t = (t + q);
+        }
+    }
 }
